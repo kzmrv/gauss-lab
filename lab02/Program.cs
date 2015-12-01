@@ -77,8 +77,18 @@ namespace lab02
                 Console.WriteLine("B" + i.ToString());
                 Console.WriteLine(B);
             }
-            Console.WriteLine("B");
-            Console.WriteLine(B);
+            var X = Vector<double>.Build.Dense(n);
+            for (int i = n - 1; i >= 0; i--)
+            {
+                double res = B[i];
+                for (int j = n - 1; j > i; j--)
+                {
+                    res -= A[i, j] * X[j];
+                }
+                X[i] = res;
+            }
+            Console.WriteLine("X");
+            Console.WriteLine(X);
             Console.Read();
         }
     }

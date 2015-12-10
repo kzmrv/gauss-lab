@@ -1,40 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.Providers;
-using MathNet.Numerics.LinearAlgebra.Solvers;
 
 namespace lab02
 {
     class Program
     {
-        public static void WriteMatrix<T>(Matrix<T> matrix, string name = "") where T : struct,IEquatable<T>, IFormattable
+        public static void WriteLine(string s) {
+
+        }
+        public static void WriteMatrix<T>(Matrix<T> matrix, StreamWriter sw, string name = "") where T : struct,IEquatable<T>, IFormattable
         {
-            Console.WriteLine("Output matrix {0}", name);
+            sw.WriteLine("Output matrix {0}", name);
             for (int j = 0; j < matrix.ColumnCount; j++)
             {
                 foreach (T el in matrix.Row(j))
                 {
-                    Console.Write(string.Format("{0,10:N5}", el));
+                    sw.Write(string.Format("{0,14:N8}", el));
                 }
-                Console.Write('\n');
+                sw.WriteLine();
             }
-            Console.WriteLine("**********************");
+            sw.WriteLine("**********************");
         }
 
-        public static void WriteVector<T>(Vector<T> vector, string name) where T : struct,IEquatable<T>, IFormattable
+        public static void WriteVector<T>(Vector<T> vector, string name, StreamWriter sw) where T : struct,IEquatable<T>, IFormattable
         {
-            Console.WriteLine("Output vector : {0}", name);
+
+            sw.WriteLine("Output vector : {0}", name);
             for (int i = 0; i < vector.Count; i++)
             {
-                Console.Write(string.Format("{0,20:N5}", vector[i]));
+                sw.Write(string.Format("{0,20:N16}", vector[i]));
             }
-            Console.WriteLine();
-            Console.WriteLine("**********************");
+            sw.WriteLine();
+            sw.WriteLine("**********************");
 
         }
         public static void Gauss(Matrix<double> A, Vector<double> B, out Vector<double> X)
@@ -44,37 +44,37 @@ namespace lab02
             var inputB = Vector<double>.Build.Dense(n);
             A.CopyTo(inputA);
             B.CopyTo(inputB);
-            WriteMatrix(A, "A");
-            WriteVector(B, "B");
-            Console.Write("\n\n");
             for (int i = 0; i < n; i++)
             {
-                Console.WriteLine(" *** Iteration {0}", i + 1);
-                WriteMatrix(A, "A" + i.ToString());
                 int maxIndex = A.Diagonal().SubVector(i, n - i).AbsoluteMaximumIndex() + i;
                 var P = Matrix<double>.Build.DenseIdentity(n, n);
                 P[maxIndex, maxIndex] = 0;
                 P[i, i] = 0;
                 P[maxIndex, i] = 1;
                 P[i, maxIndex] = 1;
-                WriteMatrix(P, "P" + i.ToString());
                 A = P * A;
-                WriteMatrix(A, "AT" + i.ToString());
-                Console.WriteLine(maxIndex);
                 var M = Matrix<double>.Build.DenseIdentity(n, n);
                 M[i, i] = 1 / A[i, i];
                 for (int j = i + 1; j < n; j++)
                 {
                     M[j, i] = -A[j, i] / A[i, i];
                 }
-                WriteMatrix(M, "M" + i.ToString());
+
                 A = M * A;
                 B = P * B;
                 B = M * B;
-                Console.WriteLine("B" + i.ToString());
-                Console.WriteLine(B);
-                Console.Write("\n\n");
+                if (i == n - 2)
+                {
+                    double det = 1;
+                    foreach (double el in A.Diagonal())
+                    {
+                        det *= el;
+                    }
+                    WriteLine("Determinant Gauss }"+det.ToString());
+                }
+
             }
+
             X = Vector<double>.Build.Dense(n);
             for (int i = n - 1; i >= 0; i--)
             {
@@ -85,54 +85,81 @@ namespace lab02
                 }
                 X[i] = res;
             }
-            Console.WriteLine("X");
-            Console.WriteLine(X);
-            var result = inputA * X - inputB;
-            WriteVector(result, "A*X - B");
         }
-
         public static void Jacobi(Matrix<double> A, Vector<double> B, out Vector<double> X)
         {
             double eps = 0.0001;
             int n = A.RowCount;
             Matrix<double> DR = (Matrix<double>.Build.Diagonal(A.Diagonal().ToArray())).Inverse();
-            WriteMatrix(DR, "Diagonal reverse");
             Matrix<double> U = A.StrictlyUpperTriangle();
-            WriteMatrix(U, "Upper triangle");
             Matrix<double> L = A.StrictlyLowerTriangle();
-            WriteMatrix(L, "Lower triangle");
             Matrix<double> SP = -DR * (L + U);
             Vector<double> prevX = Vector<double>.Build.Dense(n);
-            X = Vector<double>.Build.Dense(new double[] { 8e6, 6e6, -3e6, 2e6 });
+            X = Vector<double>.Build.Dense(new double[] { 8e6, 6e6, -3e6, 2e6, 2e6, 2e6, 2e6 });
             do
             {
                 X.CopyTo(prevX);
-                X = SP * prevX -DR * B;
+                X = SP * prevX - DR * B;
             }
             while ((prevX - X).L2Norm() > eps);
-
-
-
+            X = -X;
         }
         static void Main(string[] args)
         {
-            int n = 4;
+            StreamWriter sw = new StreamWriter(@"c:\Vasili\output.txt");
+            int n = 7;
             var B = Vector<double>.Build.Dense(n, 24);
             var C = Matrix<double>.Build.Dense(n, n, (i, j) => 2.4 * (i + 1) * (j + 1));
             var A = Matrix<double>.Build.Dense(n, n, (i, j) => 159 / (10 * C[i, j] * C[i, j] *
                 C[i, j] + C[i, j] * C[i, j] + 25));
+            for (int i = 0; i < n; i++)
+            {
+                A[i, i] += 10;
+            }
+            WriteMatrix(A, sw, "A");
+            WriteVector(B, "B", sw);
             var inputA = Matrix<double>.Build.Dense(n, n);
             A.CopyTo(inputA);
             Vector<double> gaussRes;
             Vector<double> jacobiRes;
             Gauss(A, B, out gaussRes);
-            WriteVector(gaussRes, "Gauss Result");
-            WriteMatrix(A);
+            WriteVector(gaussRes, "Gauss Result", sw);
+            Console.WriteLine("Determinant {0} ", A.Determinant());
             Jacobi(A, B, out jacobiRes);
-            WriteVector(jacobiRes, "Jacobi result");
-            Console.Read();
-            
+            WriteVector(jacobiRes, "Jacobi result", sw);
+            WriteVector(B - A * gaussRes, " diff Gauss", sw);
+            WriteVector(B - A * jacobiRes, "diff Jacobi", sw);
+            WriteMatrix(A.Inverse(), sw, "Inverse A");
 
+            var Anew = Matrix<double>.Build.Dense(n, n);
+            A.CopyTo(Anew);
+            var AR = A.Inverse();
+            double sumA = 0;
+            double sumAR = 0;
+            for (int i = 0; i < n; i++)
+            {
+                sumA += A.Row(i).Maximum();
+                sumAR += AR.Row(i).Maximum();
+            }
+            sw.WriteLine("Cond : {0} ", sumA * sumAR);
+            double eps = 0.000001;
+            for (int i = 0; i < n; i++)
+            {
+                Anew[1, i] += eps;
+            }
+            var jacobiRes2 = Vector<double>.Build.Dense(n);
+            var gaussRes2 = Vector<double>.Build.Dense(n);
+            WriteMatrix(AR * A, sw, "A-1 * A");
+            Gauss(Anew, B, out gaussRes2);
+            Jacobi(Anew, B, out jacobiRes2);
+            WriteVector(gaussRes2, " X* ", sw);
+            double err = (gaussRes2 - gaussRes).L2Norm() / gaussRes.L2Norm();
+            double err2 = (jacobiRes2 - jacobiRes).L2Norm() / jacobiRes.L2Norm();
+            sw.WriteLine("Gauss error {0}", err);
+            sw.WriteLine("Jacobi error {0}", err2);
+            sw.Close();
+            Console.WriteLine("Press any key to finish ...");
+            Console.Read();
         }
     }
 }
